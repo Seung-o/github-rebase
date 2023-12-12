@@ -172,18 +172,22 @@ const rebasePullRequest = async ({
   owner,
   pullRequestNumber,
   repo,
+  base,
 }: {
   _intercept?: ({ initialHeadSha }: { initialHeadSha: Sha }) => Promise<void>;
   octokit: Octokit;
   owner: RepoOwner;
   pullRequestNumber: PullRequestNumber;
   repo: RepoName;
+  base?: RepoName;
 }): Promise<Sha> => {
-  debug("starting", { pullRequestNumber, owner, repo });
+  debug("starting", { pullRequestNumber, owner, repo, base });
+
+  let baseRef: string;
 
   const {
     data: {
-      base: { ref: baseRef },
+      base: { ref: baseRefByPR },
       head: { ref: headRef, sha: initialHeadSha },
     },
   } = await octokit.pulls.get({
@@ -191,6 +195,9 @@ const rebasePullRequest = async ({
     pull_number: pullRequestNumber,
     repo,
   });
+
+  baseRef = !!base ? `refs/heads/${base}` : baseRefByPR;
+
   // The SHA given by GitHub for the base branch is not always up to date.
   // A request is made to fetch the actual one.
   const baseInitialSha = await fetchRefSha({
